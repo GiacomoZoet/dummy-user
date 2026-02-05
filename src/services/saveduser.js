@@ -1,56 +1,25 @@
-import { db } from '@/firebase/config.js'
-import { collection, doc, setDoc, deleteDoc, getDocs, getDoc , updateDoc} from 'firebase/firestore'
+import { db } from '../firebase/config.js'
+import { collection, doc, setDoc, deleteDoc, getDocs } from 'firebase/firestore'
 
-// Add task to todo list
-export const addTodo = async (userId, todo) => {
+// Add character to favorites
+export const addToUsers = async (userId, users) => {
     try {
-        const taskRef = doc(db, 'todo', todo.id.toString())
-        await setDoc(taskRef, todo)
+        const favRef = doc(db, 'user', userId, 'users', users.id.toString())
+        await setDoc(favRef, users)
         return { ok: true }
     } catch (error) {
         return { ok: false, error }
     }
 }
 
-// Get user todos
-export const getTodos = async (userId) => {
+    // Get all user favorites
+export const getUsers = async (userId) => {
     try {
-        const todoCollection = collection(db, 'todo')
-        const snapshot = await getDocs(todoCollection)
-
-        const todos = snapshot.docs
-            .map(doc => doc.data())
-            .filter(todo => todo.assignedTo === userId)
-
-        return { ok: true, todos }
+        const favsCollection = collection(db, 'users', userId, 'users')
+        const snapshot = await getDocs(favsCollection)
+        const favorites = snapshot.docs.map(doc => doc.data())
+        return { ok: true, favorites }
     } catch (error) {
-        console.error("getTodos error:", error);
-        return { ok: false, todos: [], error }
-    }
-}
-
-
-export const checkTodoExists = async (todoId) => {
-    try {
-        const taskRef = doc(db, 'todo', todoId.toString())
-        const docSnap = await getDoc(taskRef)
-        return docSnap.exists()
-    } catch (error) {
-        console.error("checkTodoExists error:", error)
-        return false
-    }
-}
-
-
-export const completeTodo = async (todoId) => {
-    try {
-        const taskRef = doc(db, 'todo', todoId.toString())
-        await updateDoc(taskRef, {
-            completed: true
-        })
-        return { ok: true }
-    } catch (error) {
-        console.error("completeTodo error:", error)
-        return { ok: false, error }
+        return { ok: false, favorites: [] }
     }
 }

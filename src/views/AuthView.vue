@@ -4,7 +4,7 @@
       <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
         <div class="text-center mb-8">
           <h2 class="text-3xl font-bold text-gray-800 mb-2">Create Account</h2>
-          <p class="text-gray-500">Join us and start organizing your tasks</p>
+          <p class="text-gray-500">Join us and start saving your favourite users</p>
         </div>
 
         <form @submit.prevent="registerUser" class="space-y-5">
@@ -79,7 +79,7 @@
       <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
         <div class="text-center mb-8">
           <h2 class="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h2>
-          <p class="text-gray-500">Sign in to continue to your tasks</p>
+          <p class="text-gray-500">Sign in to view your favourite users</p>
         </div>
 
         <form @submit.prevent="activateSession" class="space-y-5">
@@ -152,7 +152,7 @@ const confirmPassword = ref("")
 const loading = ref(false)
 const error = ref("")
 const success = ref("")
-const isRegisterd = ref(true)
+const isRegistered = ref(true)
 
 const auth = getAuth()
 
@@ -161,7 +161,7 @@ onMounted(() => {
         if (user && !user.emailVerified) {
             await auth.signOut()
             toast.warning("Please verify email before logging in")
-            router.push("/login")
+            router.push("/auth")
         }
     })
 })
@@ -193,7 +193,7 @@ const registerUser = async () => {
 
         const verificationResult = await sendEmailVerificationDB(result.user.user)
 
-        if (verificationResult && verificationResult.ok) {
+        if (verificationResult.ok) {
             toast.success("Email verification sent please check your inbox")
         } else {
             toast.error("Error in sending email verification. please contact system administrator")
@@ -202,7 +202,7 @@ const registerUser = async () => {
         await auth.signOut()
 
         setTimeout(() => {
-            isRegisterd.value = true
+            isRegistered.value = true
             email.value = ''
             password.value = ''
             confirmPassword.value = ''
@@ -215,8 +215,6 @@ const registerUser = async () => {
     loading.value = false
 
 }
-
-
 
 const activateSession = async () => {
     loading.value = true
