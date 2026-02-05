@@ -103,9 +103,6 @@
                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Location
                 </th>
-                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Action
-                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -117,7 +114,7 @@
                 <td class="px-6 py-4">
                   <div class="flex items-center">
                     <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold mr-3">
-                      {{ user.firstName?.charAt(0) }}{{ user.lastName?.charAt(0) }}
+                      {{ getUserInitials(user) }}
                     </div>
                     <div>
                       <p class="font-semibold text-gray-800">{{ user.firstName }} {{ user.lastName }}</p>
@@ -125,17 +122,9 @@
                   </div>
                 </td>
                 <td class="px-6 py-4 text-gray-600">{{ user.email }}</td>
-                <td class="px-6 py-4 text-gray-600">{{ user.phone }}</td>
+                <td class="px-6 py-4 text-gray-600">{{ user.phone || 'N/A' }}</td>
                 <td class="px-6 py-4 text-gray-600">{{ user.company?.name || 'N/A' }}</td>
                 <td class="px-6 py-4 text-gray-600">{{ user.address?.city || 'N/A' }}</td>
-                <td class="px-6 py-4">
-                  <button
-                    @click="removeUser(user)"
-                    class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-all duration-200 transform hover:scale-105"
-                  >
-                    <i class="fas fa-trash mr-1"></i>Remove
-                  </button>
-                </td>
               </tr>
             </tbody>
           </table>
@@ -163,15 +152,19 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useUsersStore } from '@/stores/UsersStore'
-import { removeFromUsers } from '@/services/saveduser'
-import { getAuth } from 'firebase/auth'
+import { logout } from '@/services/authentication'
 
 const getUsers = useUsersStore()
 const router = useRouter()
 const toast = useToast()
 const loading = ref(false)
 const error = ref(null)
-const auth = getAuth()
+
+const getUserInitials = (user) => {
+  const first = user.firstName ? user.firstName.charAt(0) : ''
+  const last = user.lastName ? user.lastName.charAt(0) : ''
+  return first + last || '??'
+}
 
 const savedUsers = computed(() => {
   return getUsers.Users.filter(user => user.isInDB)
@@ -196,22 +189,15 @@ onMounted(async () => {
   }
 })
 
-const removeUser = async (user) => {
-  try {
-    await removeFromUsers(user.id)
-    toast.success(`${user.firstName} removed from saved users`)
-    await getUsers.getData()
-  } catch (err) {
-    console.error('Error removing user:', err)
-    toast.error('Failed to remove user')
-  }
-}
-
 const handleLogout = async () => {
   try {
-    await auth.signOut()
-    toast.success('Logged out successfully')
-    router.push('/auth')
+    const result = await logout()
+    if (result.ok) {
+      toast.success('Logged out successfully')
+      router.push('/auth')
+    } else {
+      toast.error('Failed to logout')
+    }
   } catch (err) {
     console.error('Error logging out:', err)
     toast.error('Failed to logout')
@@ -220,5 +206,5 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
-/* Add any additional custom styles here if needed */
+/* Additional styles if needed */
 </style>

@@ -48,7 +48,7 @@
             <!-- User Avatar -->
             <div class="flex justify-center mb-4">
               <div class="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
-                {{ user.firstName?.charAt(0) }}{{ user.lastName?.charAt(0) }}
+                {{ getUserInitials(user) }}
               </div>
             </div>
 
@@ -60,20 +60,20 @@
               <p class="text-gray-500 text-sm mb-2">
                 <i class="fas fa-envelope mr-1"></i>{{ user.email }}
               </p>
-              <p class="text-gray-500 text-sm">
+              <p class="text-gray-500 text-sm" v-if="user.phone">
                 <i class="fas fa-phone mr-1"></i>{{ user.phone }}
               </p>
             </div>
 
             <!-- User Details -->
             <div class="space-y-2 mb-4 text-sm">
-              <div class="flex items-center text-gray-600">
+              <div class="flex items-center text-gray-600" v-if="user.company">
                 <i class="fas fa-briefcase w-5 mr-2 text-blue-500"></i>
-                <span>{{ user.company?.name || 'N/A' }}</span>
+                <span>{{ user.company.name || 'N/A' }}</span>
               </div>
-              <div class="flex items-center text-gray-600">
+              <div class="flex items-center text-gray-600" v-if="user.address">
                 <i class="fas fa-map-marker-alt w-5 mr-2 text-red-500"></i>
-                <span>{{ user.address?.city || 'N/A' }}</span>
+                <span>{{ user.address.city || 'N/A' }}</span>
               </div>
             </div>
 
@@ -108,29 +108,38 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useUsersStore } from '@/stores/UsersStore'
-import { getUser } from '@/services/authentication'
-import { addToUsers, removeFromUsers } from '@/services/saveduser'
-import { getAuth } from 'firebase/auth'
+import { getUser, logout } from '@/services/authentication'
+import { addToUsers } from '@/services/saveduser'
 
 const getUsers = useUsersStore()
 const router = useRouter()
 const toast = useToast()
 const loading = ref(false)
 const error = ref(null)
-const auth = getAuth()
+const currentUser = ref(null)
+
+const getUserInitials = (user) => {
+  const first = user.firstName ? user.firstName.charAt(0) : ''
+  const last = user.lastName ? user.lastName.charAt(0) : ''
+  return first + last || '??'
+}
 
 onMounted(async () => {
   try {
     loading.value = true
     error.value = null
 
-    await getUsers.getData()
+    const userRef = getUser()
+    currentUser.value = userRef.value
 
-    const user = getUser()
-    if (user) {
-      toast.success(`Welcome, ${user.email}!`)
+    if (!currentUser.value) {
+      router.push('/auth')
+      return
     }
 
+    await getUsers.getData()
+
+    toast.success(`Welcome, ${currentUser.value.email}!`)
     loading.value = false
   } catch (err) {
     console.error('Error loading users:', err)
@@ -142,14 +151,22 @@ onMounted(async () => {
 
 const toggleSaveUser = async (user) => {
   try {
-    if (user.isInDB) {
-      await removeFromUsers(user.id)
-      toast.success(`${user.firstName} removed from saved users`)
-    } else {
-      await addToUsers(user)
-      toast.success(`${user.firstName} saved to your collection!`)
+    if (!currentUser.value) {
+      toast.error('You must be logged in')
+      return
     }
-    await getUsers.getData()
+
+    if (!user.isInDB) {
+      const result = await addToUsers(currentUser.value.uid, user)
+      if (result.ok) {
+        toast.success(`${user.firstName} saved to your collection!`)
+        await getUsers.getData()
+      } else {
+        toast.error('Failed to save user')
+      }
+    } else {
+      toast.info('User already saved')
+    }
   } catch (err) {
     console.error('Error toggling user save status:', err)
     toast.error('Failed to update user status')
@@ -158,9 +175,13 @@ const toggleSaveUser = async (user) => {
 
 const handleLogout = async () => {
   try {
-    await auth.signOut()
-    toast.success('Logged out successfully')
-    router.push('/auth')
+    const result = await logout()
+    if (result.ok) {
+      toast.success('Logged out successfully')
+      router.push('/auth')
+    } else {
+      toast.error('Failed to logout')
+    }
   } catch (err) {
     console.error('Error logging out:', err)
     toast.error('Failed to logout')
@@ -169,5 +190,5 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
-/* Add any additional custom styles here if needed */
+/* Additional styles if needed */
 </style>

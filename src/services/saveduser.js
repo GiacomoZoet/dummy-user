@@ -23,3 +23,4 @@ export const getUsers = async (userId) => {
         return { ok: false, favorites: [] }
     }
 }
+
